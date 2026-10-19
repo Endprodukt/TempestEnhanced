@@ -3,3 +3,11 @@ upstream/
 _scratch/
 external/
 __pycache__/
+# videos never go to GitHub
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+*.wmv
+*.m4v
