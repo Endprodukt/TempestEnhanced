@@ -1,0 +1,5 @@
+build/
+upstream/
+_scratch/
+external/
+__pycache__/
