@@ -7,11 +7,14 @@
   controls, menu and tools are C. No C translation of Atari's routines.
 - Board checks (`tools/checkall.sh`): all six MAME recordings in
   `_scratch/cap` match frame for frame (tpcompare and tplockstep).
-- Version 0.1.36 is installed and running on the cabinet
-  (`pi@192.168.0.122:/persistent/games/tpenhanced`), Pi binary md5
-  `5a05142f9b771f76c056fe43c863aa58`, VectorPie SDK 0.9.0, 50 fps.
-- Package: `build/vpk/tpenhanced-0.1.36.vpk`, GitHub release `v0.1.36`
-  (2026-11-10; not in the Drive folder). Before: 0.1.35 (GitHub `v0.1.35`
+- Version 0.1.37 is installed on the cabinet
+  (`pi@192.168.0.122:/persistent/games/tpenhanced`; not started: its
+  screensaver had the board), Pi binary md5
+  `5a05142f9b771f76c056fe43c863aa58` (as 0.1.36), VectorPie SDK 0.9.0.
+- Package: `build/vpk/tpenhanced-0.1.37.vpk` (md5
+  `99a020d8f4f5770c6b4f82703d3e295f`), GitHub release `v0.1.37`
+  (2026-11-10; not in the Drive folder). Before: 0.1.36 (GitHub
+  `v0.1.36`), 0.1.35 (GitHub `v0.1.35`
   and the Drive folder `games`, 2026-10-27; 0.1.33 is no longer there), `tpenhanced-0.1.33.vpk` (vp-pack, without ROMs,
   md5 `70ac73e1888fc6acc93a60e286f7c3eb`): GitHub release `v0.1.33` of
   `Endprodukt/TempestEnhanced` (the repository is private: only its
@@ -19,6 +22,12 @@
   (https://drive.google.com/drive/folders/1N5vPb5K46OlYJ-xtTOY6IWD4E5GqMYiS),
   uploaded 2026-10-19. The release's tag points at the repository's
   `main` as pushed 2026-10-19 12:36 (this folder is not a git checkout).
+
+## 0.1.37: the marquee in a higher resolution
+
+- The owner's new marquee (2172x548, `_scratch/marquee-alt/source-7.png`)
+  scaled to 1427x360 and centred on black in 1920x360, as before. The
+  program is the same as 0.1.36.
 
 ## 0.1.36: VectorPie SDK 0.9.0, the sound through the SDK
 
