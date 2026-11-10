@@ -17,25 +17,55 @@ typedef struct rom_entry {
     enum dest   dest;
     uint32_t    offset;   /* within its destination */
     int         optional; /* not needed by the game */
+    int         half_of;  /* a 2K chip: the 4K ROM whose half it is (-1: none) */
 } rom_entry;
 
-/* MAME "tempest" (src/mame/atari/tempest.cpp). */
+/* MAME "tempest" (src/mame/atari/tempest.cpp): revision 3 in 4K chips;
+ * then the same program in 2K chips, two to each 4K ROM, byte for byte
+ * (MAME "tempest3", whose files the "tempest" set keeps in tempest1/,
+ * tempest2/, tempest3/; older sets, AdvanceMAME's of 1996 among them,
+ * hold only these). Those have no 136002-125: the vector generator's
+ * timing is then approximate. */
 static const rom_entry ROMS[] = {
-    { "136002-133.d1",  0x1d0cc503, 0x1000, D_PROG, 0x0000, 0 },
-    { "136002-134.f1",  0xc88e3524, 0x1000, D_PROG, 0x1000, 0 },
-    { "136002-235.j1",  0xa4b2ce3f, 0x1000, D_PROG, 0x2000, 0 },
-    { "136002-136.lm1", 0x65a9a9f9, 0x1000, D_PROG, 0x3000, 0 },
-    { "136002-237.p1",  0xde4e9e34, 0x1000, D_PROG, 0x4000, 0 },
-    { "136002-138.np3", 0x9995256d, 0x1000, D_VGROM, 0x0000, 0 },
-    { "136002-125.d7",  0x5903af03, 0x0100, D_AVG, 0, 1 },
+    { "136002-133.d1",  0x1d0cc503, 0x1000, D_PROG, 0x0000, 0, -1 },
+    { "136002-134.f1",  0xc88e3524, 0x1000, D_PROG, 0x1000, 0, -1 },
+    { "136002-235.j1",  0xa4b2ce3f, 0x1000, D_PROG, 0x2000, 0, -1 },
+    { "136002-136.lm1", 0x65a9a9f9, 0x1000, D_PROG, 0x3000, 0, -1 },
+    { "136002-237.p1",  0xde4e9e34, 0x1000, D_PROG, 0x4000, 0, -1 },
+    { "136002-138.np3", 0x9995256d, 0x1000, D_VGROM, 0x0000, 0, -1 },
+    { "136002-125.d7",  0x5903af03, 0x0100, D_AVG, 0, 1, -1 },
+    { "136002-113.d1",  0x65d61fe7, 0x0800, D_PROG, 0x0000, 1, 0 },
+    { "136002-114.e1",  0x11077375, 0x0800, D_PROG, 0x0800, 1, 0 },
+    { "136002-115.f1",  0xf3e2827a, 0x0800, D_PROG, 0x1000, 1, 1 },
+    { "136002-316.h1",  0xaeb0f7e9, 0x0800, D_PROG, 0x1800, 1, 1 },
+    { "136002-217.j1",  0xef2eb645, 0x0800, D_PROG, 0x2000, 1, 2 },
+    { "136002-118.k1",  0xbeb352ab, 0x0800, D_PROG, 0x2800, 1, 2 },
+    { "136002-119.lm1", 0xa4de050f, 0x0800, D_PROG, 0x3000, 1, 3 },
+    { "136002-120.mn1", 0x35619648, 0x0800, D_PROG, 0x3800, 1, 3 },
+    { "136002-121.p1",  0x73d38e47, 0x0800, D_PROG, 0x4000, 1, 4 },
+    { "136002-222.r1",  0x707bd5c3, 0x0800, D_PROG, 0x4800, 1, 4 },
+    { "136002-123.np3", 0x29f7e937, 0x0800, D_VGROM, 0x0000, 1, 5 },
+    { "136002-124.r3",  0xc16ec351, 0x0800, D_VGROM, 0x0800, 1, 5 },
 };
 #define NROMS ((int)(sizeof ROMS / sizeof ROMS[0]))
-#define ALL_FOUND ((1u << NROMS) - 1u)
+/* the search ends with the 4K set and its PROM (the 2K chips are only
+ * used as long as no better is found) */
+#define ALL_FOUND 0x7fu
+
+/* A 4K ROM: found itself, or both its halves. */
+static int have(const tp_romset *rs, int i)
+{
+    if (rs->found & (1u << i)) return 1;
+    int halves = 0;
+    for (int k = 0; k < NROMS; k++)
+        if (ROMS[k].half_of == i && (rs->found & (1u << k))) halves++;
+    return halves == 2;
+}
 
 static int complete(const tp_romset *rs)
 {
     for (int i = 0; i < NROMS; i++)
-        if (!ROMS[i].optional && !(rs->found & (1u << i))) return 0;
+        if (!ROMS[i].optional && !have(rs, i)) return 0;
     return 1;
 }
 
@@ -71,7 +101,7 @@ static void scan_zip(tp_romset *rs, const char *path)
     memset(&zip, 0, sizeof zip);
     if (!mz_zip_reader_init_file(&zip, path, 0)) return;
     mz_uint n = mz_zip_reader_get_num_files(&zip);
-    for (mz_uint i = 0; i < n && rs->found != ALL_FOUND; i++) {
+    for (mz_uint i = 0; i < n && (rs->found & ALL_FOUND) != ALL_FOUND; i++) {
         mz_zip_archive_file_stat st;
         if (!mz_zip_reader_file_stat(&zip, i, &st) || st.m_is_directory) continue;
         if (!wanted_size((size_t)st.m_uncomp_size)) continue;
@@ -118,7 +148,7 @@ static void scan_dir(tp_romset *rs, const char *path)
     if (!d) return;
     struct dirent *de;
     char full[2048];
-    while ((de = readdir(d)) != NULL && rs->found != ALL_FOUND) {
+    while ((de = readdir(d)) != NULL && (rs->found & ALL_FOUND) != ALL_FOUND) {
         if (de->d_name[0] == '.') continue;
         snprintf(full, sizeof full, "%s/%s", path, de->d_name);
         if (!is_dir(full) && !ends_with_zip(full)) scan_file(rs, full);
@@ -129,7 +159,7 @@ static void scan_dir(tp_romset *rs, const char *path)
 int tp_romset_load(tp_romset *rs, const char *const *paths, int npaths)
 {
     memset(rs, 0, sizeof *rs);
-    for (int i = 0; i < npaths && rs->found != ALL_FOUND; i++) {
+    for (int i = 0; i < npaths && (rs->found & ALL_FOUND) != ALL_FOUND; i++) {
         if (!paths[i] || !*paths[i]) continue;
         if (is_dir(paths[i])) scan_dir(rs, paths[i]);
         else if (ends_with_zip(paths[i])) scan_zip(rs, paths[i]);
@@ -143,7 +173,7 @@ const char *tp_romset_missing(const tp_romset *rs, char *buf, int size)
     int len = 0;
     buf[0] = '\0';
     for (int i = 0; i < NROMS; i++) {
-        if ((rs->found & (1u << i)) || ROMS[i].optional) continue;
+        if (ROMS[i].optional || have(rs, i)) continue;
         len += snprintf(buf + len, len < size ? (size_t)(size - len) : 0, "%s%s", len ? ", " : "", ROMS[i].name);
         if (len >= size) break;
     }
@@ -188,5 +218,6 @@ int tp_romset_default_paths(const char **out, int max)
         n = tp_romset_add_dir(out, n, max, h2);
     }
     n = tp_romset_add_dir(out, n, max, "/home/pi/.advance/rom");
+    n = tp_romset_add_dir(out, n, max, "/usr/local/share/advance/rom");     /* (AdvanceMAME's own, the cabinet's set) */
     return n;
 }

@@ -1,78 +1,81 @@
 #include "platform/audio.h"
 
-#include <SDL.h>
+#include <vectorpie/vp_audio.h>
 
 #include <stdio.h>
 #include <string.h>
 
-static SDL_AudioDeviceID g_dev;
-static int16_t g_last[2];
-static volatile uint32_t g_dry, g_dropped;
+/* The sound goes out as the SDK's stream of a game's own samples
+ * (vp_stream_play): the SDK mixes it, resampled to the device, at the
+ * cabinet menu's volume (its MUSIC VOLUME: the SDK counts a game's own
+ * stream as music), on top of the game's own VOLUME. */
+#define AHEAD_MAX   (TP_SOUND_RATE / 4)     /* more waiting than this: the device is behind */
+#define AHEAD_KEEP  (TP_SOUND_RATE / 10)    /* then down to this */
+#define CHUNK       1024                    /* pairs moved at a time */
 
-static void SDLCALL fill(void *user, Uint8 *stream, int len)
-{
-    tp_sound *snd = (tp_sound *)user;
-    int16_t *out = (int16_t *)stream;
-    int want = len / 4;                 /* pairs of left and right */
-    int got = tp_sound_read(snd, out, want);
-    if (got < want) g_dry += (uint32_t)(want - got);
-    if (got > 0) { g_last[0] = out[2 * got - 2]; g_last[1] = out[2 * got - 1]; }
-    /* Run dry (the game stalled or is just starting): let the last level
-     * die away instead of clicking. */
-    for (int i = got; i < want; i++)
-        for (int k = 0; k < 2; k++) {
-            g_last[k] = (int16_t)(g_last[k] - g_last[k] / 64);
-            out[2 * i + k] = g_last[k];
-        }
-}
+static vp_audio *g_audio;
+static vp_voice  g_voice;
+static uint32_t  g_dry, g_dropped;
 
 int tp_audio_open(tp_sound *snd)
 {
-    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
-        fprintf(stderr, "tempest: no sound: %s\n", SDL_GetError());
+    (void)snd;
+    if (vp_audio_open(&g_audio) != VP_OK) {
+        fprintf(stderr, "tempest: no sound: %s\n", vp_last_error());
+        g_audio = NULL;
         return -1;
     }
-    SDL_AudioSpec want, have;
-    memset(&want, 0, sizeof want);
-    want.freq = TP_SOUND_RATE;
-    want.format = AUDIO_S16SYS;
-    want.channels = 2;
-    want.samples = 1024;
-    want.callback = fill;
-    want.userdata = snd;
-    g_dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
-    if (!g_dev) {
-        fprintf(stderr, "tempest: no sound device: %s\n", SDL_GetError());
+    g_voice = vp_stream_play(g_audio, TP_SOUND_RATE, 1.0f);
+    if (!g_voice) {
+        fprintf(stderr, "tempest: no sound stream: %s\n", vp_last_error());
+        vp_audio_close(g_audio);
+        g_audio = NULL;
         return -1;
     }
-    SDL_PauseAudioDevice(g_dev, 0);
     return 0;
 }
 
 void tp_audio_close(void)
 {
-    if (g_dev) SDL_CloseAudioDevice(g_dev);
-    g_dev = 0;
+    if (g_audio) {
+        if (g_voice) vp_voice_stop(g_audio, g_voice, 0.0f);
+        vp_audio_close(g_audio);
+    }
+    g_audio = NULL;
+    g_voice = 0;
 }
 
 void tp_audio_balance(tp_sound *snd)
 {
-    /* More than a quarter of a second waiting: the device is behind. Drop
-     * what is oldest, down to a tenth of a second. */
+    if (!g_audio || !g_voice) return;
+    int queued = vp_stream_queued(g_audio, g_voice);
+    if (queued <= 0) g_dry++;           /* (it ran dry since the last picture: a click, perhaps) */
+    /* More than a quarter of a second waiting: the device is behind. What
+     * the game made is dropped, oldest first, down to a tenth of a second. */
     uint32_t waiting = snd->ring_w - snd->ring_r;
-    if (waiting > TP_SOUND_RATE / 4) {
-        if (g_dev) SDL_LockAudioDevice(g_dev);
-        g_dropped += waiting - TP_SOUND_RATE / 10;
-        snd->ring_r = snd->ring_w - TP_SOUND_RATE / 10;
-        if (g_dev) SDL_UnlockAudioDevice(g_dev);
+    if ((uint32_t)queued + waiting > AHEAD_MAX) {
+        uint32_t keep = (uint32_t)queued < AHEAD_KEEP ? AHEAD_KEEP - (uint32_t)queued : 0;
+        if (waiting > keep) {
+            g_dropped += waiting - keep;
+            snd->ring_r = snd->ring_w - keep;
+        }
+    }
+    /* everything new to the stream, as float */
+    static int16_t pairs[CHUNK * 2];
+    static float frames[CHUNK * 2];
+    for (;;) {
+        int n = tp_sound_read(snd, pairs, CHUNK);
+        if (n <= 0) break;
+        for (int i = 0; i < 2 * n; i++) frames[i] = (float)pairs[i] * (1.0f / 32768.0f);
+        int took = vp_stream_write(g_audio, g_voice, frames, n);
+        if (took < n) g_dropped += (uint32_t)(n - took);
+        if (n < CHUNK) break;
     }
 }
 
 void tp_audio_trouble(uint32_t *dry, uint32_t *dropped)
 {
-    if (g_dev) SDL_LockAudioDevice(g_dev);
     *dry = g_dry;
     *dropped = g_dropped;
     g_dry = g_dropped = 0;
-    if (g_dev) SDL_UnlockAudioDevice(g_dev);
 }

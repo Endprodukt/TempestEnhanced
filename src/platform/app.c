@@ -74,7 +74,26 @@ int tp_app_open(tp_app *a, const char *title, int argc, char **argv, double boar
         fprintf(stderr, "%s: cannot open the output: %s\n", title, vp_last_error());
         return -1;
     }
-    if (vp_input_open(&a->in) != VP_OK) {
+    int r = vp_input_open(&a->in);
+#if defined(__linux__)
+    /* The keyboard comes through SDL's video, on the Pi KMS/DRM, which needs
+     * a screen on the HDMI port that no other program holds. A cabinet
+     * without one (no marquee monitor) or with its menu still on it would end
+     * the game here, though the board and the joysticks need no screen: then
+     * the keyboard straight from the kernel (evdev), else none (dummy), and
+     * no marquee. A driver the user chose (SDL_VIDEODRIVER) is left alone. */
+    if (r != VP_OK && vp_dvg_get_output(a->dvg) == VP_DVG_OUTPUT_BOARD && !getenv("SDL_VIDEODRIVER")) {
+        static const char *const FALLBACK[] = { "evdev", "dummy" };
+        fprintf(stderr, "%s: no screen for the controls (%s): without the marquee\n", title, vp_last_error());
+        for (int k = 0; k < 2 && r != VP_OK; k++) {
+            setenv("SDL_VIDEODRIVER", FALLBACK[k], 1);
+            SDL_SetHint(SDL_HINT_VIDEODRIVER, FALLBACK[k]);
+            r = vp_input_open(&a->in);
+            if (r == VP_OK) fprintf(stderr, "%s: controls through SDL's %s driver\n", title, FALLBACK[k]);
+        }
+    }
+#endif
+    if (r != VP_OK) {
         fprintf(stderr, "%s: cannot open the controls: %s\n", title, vp_last_error());
         vp_dvg_close(a->dvg);
         a->dvg = NULL;

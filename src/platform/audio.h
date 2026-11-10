@@ -1,8 +1,9 @@
 /* audio.h - the sound's samples to the sound device.
  *
- * The SDK's vp_audio plays files and ready samples; this sound is made as
- * the game runs, so it has an SDL audio device of its own that pulls from
- * the ring of sound/sound.h. With no sound device the game runs silent.
+ * The sound is made as the game runs (sound/sound.h, its ring); once a
+ * picture the new samples go to the SDK's stream of a game's own samples
+ * (vp_audio.h, vp_stream_play), which the SDK mixes at the cabinet menu's
+ * volume. With no sound device the game runs silent.
  */
 #ifndef TP_AUDIO_H
 #define TP_AUDIO_H
@@ -13,12 +14,13 @@
 int  tp_audio_open(tp_sound *snd);
 void tp_audio_close(void);
 
-/* Keep the ring from running full when the device takes samples a little
- * slower than the game makes them: call once per picture. */
+/* Once per picture: the new samples to the stream, about a tenth of a
+ * second kept ahead; what is too far ahead (the device takes samples a
+ * little slower than the game makes them) is dropped. */
 void tp_audio_balance(tp_sound *snd);
 
-/* Samples the device wanted and the game had not made yet (it ran dry: a
- * click), and samples dropped because it ran behind, since the last call. */
+/* Pictures at which the stream had run dry (a click, perhaps), and samples
+ * dropped because it ran behind, since the last call. */
 void tp_audio_trouble(uint32_t *dry, uint32_t *dropped);
 
 #endif

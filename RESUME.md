@@ -1,5 +1,8 @@
 # Tempest Enhanced: continuing
 
+- SDK: `external/VectorPie` is a clone of github.com/Goldfinch2/VectorPie
+  (ignored by this repository); 0.1.36 was built at `b00d537` (SDK 0.9.0).
+  The sound goes through the SDK's stream (`platform/audio.c`).
 - Builds: `cmake --build build/pc` (MSYS2 gcc, SDL2; in Git Bash first
   `export PATH="/c/msys64/mingw64/bin:$PATH"`, else it fails without a
   message) and `cmake --build build/pi` (clang + lld,
@@ -15,7 +18,19 @@
   `tpenhanced`, then
   `sh external/VectorPie/sdk/tools/vp-pack/vp-pack.sh <folder> build/vpk`.
   Never put the ROMs in the package. Bump `version` in `package/game.ini`.
-- The ROM on the cabinet: `/persistent/games/tpenhanced/roms/tempest.zip`
+- Releasing a package (as the other Enhanced games): a GitHub release
+  `gh release create v<version> build/vpk/tpenhanced-<version>.vpk -R
+  Endprodukt/TempestEnhanced` and the same file in the shared Google Drive
+  folder `games` (https://drive.google.com/drive/folders/1N5vPb5K46OlYJ-xtTOY6IWD4E5GqMYiS),
+  uploaded through the owner's Chrome (Claude in Chrome): New -> File
+  upload, with `HTMLInputElement.prototype.click` overridden first so the
+  file input Drive makes stays in the page instead of opening Windows'
+  dialog, then `file_upload` into it. A file of the same name is replaced
+  by Drive as a new version.
+- The ROM on the cabinet: AdvanceMAME's old 2K set in
+  `/usr/local/share/advance/rom` is enough since 0.1.34 (approximate vector
+  timing); the 4K set with 136002-125 in the game's `roms/`
+  gives the exact one: `/persistent/games/tpenhanced/roms/tempest.zip`
   (see STATUS.md).
 - The game's routines stay in the ROM; enhancements hook onto RAM state,
   program addresses and what the picture holds (sub-lists and shapes of

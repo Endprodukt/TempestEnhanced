@@ -1,16 +1,115 @@
 # Tempest Enhanced: status
 
-## Current state (2026-10-19)
+## Current state (2026-11-10)
 
 - The game logic runs as the original program from the owner's MAME
   `tempest.zip` (rev 3) on the 6502 core. Board, rendering, sound,
   controls, menu and tools are C. No C translation of Atari's routines.
 - Board checks (`tools/checkall.sh`): all six MAME recordings in
   `_scratch/cap` match frame for frame (tpcompare and tplockstep).
-- Version 0.1.30 is installed and running on the cabinet
+- Version 0.1.36 is installed and running on the cabinet
   (`pi@192.168.0.122:/persistent/games/tpenhanced`), Pi binary md5
-  `4cd7d171d7b42d728fe474c5a1e37ed3`, 50 fps.
-- Package: `build/vpk/tpenhanced-0.1.30.vpk` (vp-pack, without ROMs).
+  `5a05142f9b771f76c056fe43c863aa58`, VectorPie SDK 0.9.0, 50 fps.
+- Package: `build/vpk/tpenhanced-0.1.36.vpk`, GitHub release `v0.1.36`
+  (2026-11-10; not in the Drive folder). Before: 0.1.35 (GitHub `v0.1.35`
+  and the Drive folder `games`, 2026-10-27; 0.1.33 is no longer there), `tpenhanced-0.1.33.vpk` (vp-pack, without ROMs,
+  md5 `70ac73e1888fc6acc93a60e286f7c3eb`): GitHub release `v0.1.33` of
+  `Endprodukt/TempestEnhanced` (the repository is private: only its
+  owner sees the release) and the shared Google Drive folder `games`
+  (https://drive.google.com/drive/folders/1N5vPb5K46OlYJ-xtTOY6IWD4E5GqMYiS),
+  uploaded 2026-10-19. The release's tag points at the repository's
+  `main` as pushed 2026-10-19 12:36 (this folder is not a git checkout).
+
+## 0.1.36: VectorPie SDK 0.9.0, the sound through the SDK
+
+- The SDK in `external/VectorPie` brought from `be77e1c` to `b00d537`
+  (SDK 0.9.0, menu 1.1.13): builds unchanged on the PC and the Pi.
+- Its new audio option: every SDK game follows the cabinet menu's MUSIC
+  VOLUME and SOUND VOLUME (`/usr/local/share/advance/vector_pie_menu.cfg`,
+  `[audio]` `music_volume`, `effects_volume`). The game's sound had an SDL
+  audio device of its own and missed them. `platform/audio.c` now hands
+  the POKEYs' samples, once a picture, to the SDK's stream of a game's own
+  samples (`vp_stream_play` / `vp_stream_write`, 48 kHz stereo float,
+  resampled by the SDK), kept about a tenth of a second ahead, over a
+  quarter of a second dropped. The SDK counts such a stream as music, so
+  MUSIC VOLUME applies (63 on the cabinet, SOUND VOLUME 50), on top of the
+  game's VOLUME.
+- Checked: `_scratch/wide/streamtest` (a robot game in real time on the
+  PC's sound device, 20 s: no drops, dry only at the start); checkall ALL
+  THE SAME; on the cabinet "VectorPie SDK 0.9.0", no sound error, 50 fps.
+  Not listened to on the cabinet.
+- Noticed in that run: "0 joystick(s)" (other days 1), and the blank way
+  per picture higher than in earlier logs of the attract mode (71-90k
+  against 49-63k; lit about the same, 50 fps held). Not looked into.
+- New `README.md` (English) for the repository and the release.
+
+## 0.1.35: no screen on the HDMI port is no longer the end
+
+- A colleague's cabinet (in the USA, 0.1.33 from the Drive folder) ended
+  the game at once: "cannot open the controls: SDL video init failed:
+  kmsdrm not available". The SDK's `vp_input_open` starts SDL's video for
+  the keyboard, on the Pi forced to KMS/DRM, which needs a screen on the
+  HDMI port that no other program holds (no marquee monitor there, or the
+  menu still on it; not known which). All SDK games (`vp_run` too) stop the
+  same way.
+- `platform/app.c`: with the board as output and no `SDL_VIDEODRIVER` set,
+  a failed `vp_input_open` is tried again with SDL's `evdev` driver (the
+  keyboard straight from the kernel), then `dummy`; the game then runs
+  without the marquee picture. SDL on the cabinet is 2.32.4 (`evdev`,
+  `dummy`, `offscreen`, `KMSDRM` built in).
+- Checked on the cabinet with KMS/DRM made to fail
+  (`SDL_KMSDRM_DEVICE_INDEX=7`): "no screen for the controls (...)",
+  "controls through SDL's evdev driver", 50 fps, the joystick found; the
+  normal start unchanged. Not checked on the colleague's cabinet.
+- The other games (Battlezone, Red Baron, Tempest 2000, ...) would need
+  the same (or the SDK itself).
+
+## 0.1.34: AdvanceMAME's old ROM set is enough
+
+- The cabinet's AdvanceMAME `tempest.zip` (1996, twelve 2K chips,
+  `/usr/local/share/advance/rom`) is the same revision 3 program as MAME's
+  4K set: each pair of 2K chips is a 4K ROM byte for byte (checked by
+  CRC: 113+114 = 133.d1, 115+316 = 134.f1, 217+118 = 235.j1, 119+120 =
+  136.lm1, 121+222 = 237.p1, 123+124 = 138.np3). `rom/romset.c` takes the
+  2K chips as halves of the 4K ROMs; the search goes on for the 4K set and
+  136002-125 (the vector generator's state PROM, not in the old set),
+  which then win. Without the PROM the vector generator's timing is
+  approximate: in play 27.0-27.4 game frames a second either way
+  (`pacetest_noprom`); MAME frame-for-frame agreement needs the PROM.
+- `/usr/local/share/advance/rom` is in the default search too (besides
+  `dir_rom` of `~/.advance/advmame.rc`, which names it on the cabinet).
+- Checked: `_scratch/oldrom/romtest` (4K set, old zip, old folder, both:
+  the same program and vector ROM, PROM only with the 4K set; nothing:
+  the six 4K names missing); checkall ALL THE SAME; on the cabinet with
+  `roms/` moved away: "ROM set complete (no 136002-125: ...)", attract at
+  50 fps for a minute.
+- So the package needs no ROM of its own on a cabinet with AdvanceMAME's
+  Tempest; the open question whether INSTALL GAMES keeps `roms/` matters
+  only for the exact timing.
+
+## 0.1.33: the newer marquee, released
+
+- The owner's newer marquee (2000x513, `_scratch/marquee-alt/source-6.webp`)
+  in proportion on black (1403x360 in 1920x360). Same Pi binary as 0.1.31.
+
+## 0.1.32: the marquee in proportion
+
+- The owner's marquee no longer stretched: scaled to the screen's height
+  (1020x360) and centred on black (`magick SRC -resize x360 -background
+  black -gravity center -extent 1920x360`). Same Pi binary as 0.1.31.
+
+## 0.1.31: new marquee, stretched over the whole width
+
+- `package/marquee.png`: the owner's TEMPEST Enhanced marquee (2000x706,
+  source kept in `_scratch/marquee-alt/source-5.webp`) stretched to the
+  marquee screen's 1920x360 as asked (not in proportion: about half as
+  tall); the one before is `_scratch/marquee-alt/marquee-0.1.30.png`.
+- The Pi binary of 0.1.31 (`build/pi/tempest`, built 2026-10-19 09:19)
+  carries the menu work of another session, wanted by the owner:
+  `platform/controls.c` and `platform/menu.c` (the menu's own controls
+  through `vpbind.h`, left and right on a binding step to NONE first,
+  SERVICE MENU included). It went to the cabinet with the marquee; that
+  work's own checks are that session's.
 
 ## 0.1.30: the old tube's near rim left out in the flight (fx_rim)
 
@@ -558,12 +657,12 @@ picture flickers a little.
 ## Known issues and limitations
 
 - The cabinet's AdvanceMAME `tempest.zip` (`/usr/local/share/advance/rom`)
-  is the old 1996 2K-chip set, which the game does not accept. The owner's
-  modern set was copied to `/persistent/games/tpenhanced/roms/tempest.zip`.
-  Untested: whether INSTALL GAMES (vpk upgrade) keeps that `roms/` folder.
-  If not, the ROM has to be copied again after an upgrade (or moved to a
-  place that survives, such as `/home/pi/.advance/rom`, if AdvanceMAME
-  does not trip over the modern set there).
+  is the old 1996 2K-chip set; taken since 0.1.34 (approximate vector
+  generator timing without 136002-125). The owner's
+  modern set is at `/persistent/games/tpenhanced/roms/tempest.zip` (for
+  the 0.1.34 test briefly renamed `roms.off`), for the exact timing. Untested:
+  whether INSTALL GAMES (vpk upgrade) keeps that `roms/` folder; if not,
+  the game still runs from AdvanceMAME's set.
 - `BUILD.md` is referenced by `CMakeLists.txt`, `deploy.sh` and the
   toolchain file but does not exist.
 - `tests/` is empty; the checks are the MAME recordings above.

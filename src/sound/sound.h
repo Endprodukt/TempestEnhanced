@@ -5,7 +5,7 @@
  * the RC network MAME gives it (set_output_rc: 10k, 0.015 uF, 5 V,
  * sound/pokey.h pokey_run_rc), both mixed at half each, as in MAME's
  * driver. tp_sound_run makes the samples of the CPU time that has passed
- * into a ring the sound device reads from another thread (platform/audio.h).
+ * into a ring, which goes to the SDK's audio once a picture (platform/audio.h).
  * The cabinet has one speaker: both channels of the output carry it.
  */
 #ifndef TP_SOUND_H

@@ -5,7 +5,10 @@
  *
  * The program is revision 3, MAME's set "tempest" (tempest.zip). Its
  * five 4K program ROMs and the vector ROM are what the source in
- * upstream/ (ALEXEC.LDA) assembles to, byte for byte.
+ * upstream/ (ALEXEC.LDA) assembles to, byte for byte. The same in 2K
+ * chips (MAME "tempest3"; older sets such as AdvanceMAME's of 1996 hold
+ * only these) is taken too, two halves to a 4K ROM; the 4K set is
+ * looked for on (its PROM gives the vector generator's exact timing).
  *
  * Files are matched by CRC32, so names and zip layout do not matter.
  */
@@ -31,7 +34,8 @@ int tp_romset_load(tp_romset *rs, const char *const *paths, int npaths);
 const char *tp_romset_missing(const tp_romset *rs, char *buf, int size);
 
 /* The default search list: $TP_ROMS (a ';'- or ':'-separated list), then
- * ./roms and the usual AdvanceMAME/MAME rom folders, each tried as
+ * ./roms and the usual AdvanceMAME/MAME rom folders (the cabinet's
+ * /usr/local/share/advance/rom among them), each tried as
  * tempest.zip and as a directory. Returns the count. */
 int tp_romset_default_paths(const char **out, int max);
 
