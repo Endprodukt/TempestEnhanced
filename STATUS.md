@@ -28,9 +28,8 @@
   wants a marquee taken as given (the menu fits it to the screen). A first
   0.1.37 package with it scaled and padded to 1920x360 was replaced in the
   release the same day. The program is the same as 0.1.36. The tag
-  `v0.1.37` still points at `562cd56` (the scaled marquee); the package and
-  `main` (`548ca0f`) hold the marquee as supplied (moving a published tag
-  needs a force push, not done).
+  `v0.1.37` was moved (force push, with the owner's go-ahead) from
+  `562cd56` (the scaled marquee) to `537a089`.
 
 ## 0.1.36: VectorPie SDK 0.9.0, the sound through the SDK
 
