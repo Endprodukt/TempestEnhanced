@@ -7,12 +7,11 @@
   controls, menu and tools are C. No C translation of Atari's routines.
 - Board checks (`tools/checkall.sh`): all six MAME recordings in
   `_scratch/cap` match frame for frame (tpcompare and tplockstep).
-- Version 0.1.37 is installed on the cabinet
-  (`pi@192.168.0.122:/persistent/games/tpenhanced`; not started: its
-  screensaver had the board), Pi binary md5
+- Version 0.1.37 is installed and running on the cabinet
+  (`pi@192.168.0.122:/persistent/games/tpenhanced`), Pi binary md5
   `5a05142f9b771f76c056fe43c863aa58` (as 0.1.36), VectorPie SDK 0.9.0.
 - Package: `build/vpk/tpenhanced-0.1.37.vpk` (md5
-  `99a020d8f4f5770c6b4f82703d3e295f`), GitHub release `v0.1.37`
+  `80766c33fa813cd2980953a33eccec04`), GitHub release `v0.1.37`
   (2026-11-10; not in the Drive folder). Before: 0.1.36 (GitHub
   `v0.1.36`), 0.1.35 (GitHub `v0.1.35`
   and the Drive folder `games`, 2026-10-27; 0.1.33 is no longer there), `tpenhanced-0.1.33.vpk` (vp-pack, without ROMs,
@@ -25,9 +24,10 @@
 
 ## 0.1.37: the marquee in a higher resolution
 
-- The owner's new marquee (2172x548, `_scratch/marquee-alt/source-7.png`)
-  scaled to 1427x360 and centred on black in 1920x360, as before. The
-  program is the same as 0.1.36.
+- The owner's new marquee (2172x548) as it is, not resized: the owner
+  wants a marquee taken as given (the menu fits it to the screen). A first
+  0.1.37 package with it scaled and padded to 1920x360 was replaced in the
+  release the same day. The program is the same as 0.1.36.
 
 ## 0.1.36: VectorPie SDK 0.9.0, the sound through the SDK
 
